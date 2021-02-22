@@ -52,10 +52,21 @@ public class Server {
         }
     }
 
-    public void broadcastMsg(ClientHandler sender, String msg){
-        String message = String.format("[ %s ]: %s", sender.getNickname(), msg);
+    public boolean sendPrivateMessage(String receiverNickName, String message, ClientHandler sender)  {
+        for (ClientHandler client : this.clients) {
+            if (client.getNickname().equals(receiverNickName)) {
+                String msg = ClientHandler.prepareMessage(sender.getNickname(), message);
+                client.sendMsg(msg);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void broadcastMsg(ClientHandler sender, String message){
+        String msg = ClientHandler.prepareMessage(sender.getNickname(), message);
         for (ClientHandler c : clients) {
-            c.sendMsg(message);
+            c.sendMsg(msg);
         }
     }
 

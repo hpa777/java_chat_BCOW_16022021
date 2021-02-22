@@ -56,13 +56,25 @@ public class ClientHandler {
                     //цикл работы
                     while (true) {
                         String str = in.readUTF();
-
-                        if (str.equals(Command.END)) {
+                        if (str.isEmpty()) {
+                            continue;
+                        } else if (str.equals(Command.END)) {
                             out.writeUTF(Command.END);
                             break;
+                        } else if (str.trim().startsWith(Command.PRIVATE_MESSAGE_HEAD)) {
+                            String[] parts = str.trim().split("\\s", 3);
+                            if (parts.length == 3) {
+                                String response = "";
+                                if (server.sendPrivateMessage(parts[1], parts[2], this)) {
+                                    response = prepareMessage(this.getNickname(), parts[2]);
+                                } else {
+                                    response = String.format("Пользователь с ником [ %s ] не найден.", parts[2]);
+                                }
+                                this.sendMsg(response);
+                            }
+                        } else {
+                            server.broadcastMsg(this, str);
                         }
-
-                        server.broadcastMsg(this, str);
                     }
                 } catch (RuntimeException e) {
                     System.out.println(e.getMessage());
@@ -93,5 +105,9 @@ public class ClientHandler {
 
     public String getNickname() {
         return nickname;
+    }
+
+    public static String prepareMessage(String nickname, String message) {
+        return String.format("[ %s ]: %s", nickname, message);
     }
 }

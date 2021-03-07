@@ -9,4 +9,6 @@ public class Command {
     public static final String REQUEST_TO_REG = "/reg";
     public static final String REG_ACCEPT = "/regok";
     public static final String REG_REJECT = "/regno";
+    public static final String CHANGE_NICK = "/c";
+    public static final String CHANGE_NICK_ACCEPT = "/cok";
 }

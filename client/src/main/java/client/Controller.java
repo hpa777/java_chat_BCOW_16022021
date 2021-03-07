@@ -121,8 +121,7 @@ public class Controller implements Initializable {
                             if (str.equals(Command.END)) {
                                 System.out.println("Client disconnected");
                                 break;
-                            }
-                            if (str.startsWith(Command.CLIENT_LIST)) {
+                            } else if (str.startsWith(Command.CLIENT_LIST)) {
                                 String[] token = str.split("\\s");
                                 Platform.runLater(()->{
                                     clientList.getItems().clear();
@@ -130,12 +129,14 @@ public class Controller implements Initializable {
                                         clientList.getItems().add(token[i]);
                                     }
                                 });
+                            } else if (str.startsWith(Command.CHANGE_NICK_ACCEPT)) {
+                                String[] token = str.split("\\s");
+                                setTitle(token[1]);
+                                textArea.appendText("Ник успешно сменен.\n");
                             }
                         } else {
                             textArea.appendText(str + "\n");
                         }
-
-
                     }
                 } catch (RuntimeException e) {
                     System.out.println(e.getMessage());

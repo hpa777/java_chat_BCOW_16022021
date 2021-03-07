@@ -2,7 +2,7 @@ package server;
 
 import commands.Command;
 
-import java.io.Console;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,13 +14,11 @@ public class ClientHandler {
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
-    private String nickname;
-    private String login;
+    private User user;
 
     private final static int SOCKET_TIMEOUT = 120000;
 
     public ClientHandler(Server server, Socket socket) {
-
         try {
             this.server = server;
             this.socket = socket;
@@ -45,14 +43,14 @@ public class ClientHandler {
                             }
                             String newNick = server.getAuthService()
                                     .getNicknameByLoginAndPassword(token[1], token[2]);
-                            this.login = token[1];
-                            if (newNick != null) {
-                                if (!server.isLoginAuthenticated(login)) {
-                                    nickname = newNick;
-                                    sendMsg(Command.AUTH_OK + " " + nickname);
+
+                            user = ((DbAuthService)server.getAuthService()).getUserByLoginAndPassword(token[1], token[2]);
+                            if (user != null) {
+                                if (!server.isLoginAuthenticated(user.getLogin())) {
+                                    sendMsg(Command.AUTH_OK + " " + user.getNick());
                                     server.subscribe(this);
                                     System.out.println("client: " + socket.getRemoteSocketAddress() +
-                                            " connected with nick: " + nickname);
+                                            " connected with nick: " + user.getNick());
                                     break;
                                 } else {
                                     sendMsg("Данная учетная запись уже используется");
@@ -74,21 +72,24 @@ public class ClientHandler {
                     this.socket.setSoTimeout(0);
                     while (true) {
                         String str = in.readUTF();
+                        str = str.trim();
                         if (str.isEmpty()) {
                             continue;
                         } else if (str.equals(Command.END)) {
                             out.writeUTF(Command.END);
                             break;
-                        } else if (str.trim().startsWith(Command.PRIVATE_MESSAGE_HEAD)) {
-                            String[] parts = str.trim().split("\\s", 3);
+                        } else if (str.startsWith(Command.CHANGE_NICK)) {
+                            String[] parts = str.split("\\s");
+                            if (parts.length == 2 && this.user.changeNickName(parts[1])) {
+                                this.sendMsg(String.format("%s %s", Command.CHANGE_NICK_ACCEPT, parts[1]));
+                                server.broadcastClientList();
+                            } else {
+                                this.sendMsg("Такой ник уже используется");
+                            }
+                        } else if (str.startsWith(Command.PRIVATE_MESSAGE_HEAD)) {
+                            String[] parts = str.split("\\s", 3);
                             if (parts.length == 3) {
-                                String response = "";
-                                if (server.sendPrivateMessage(parts[1], parts[2], this)) {
-                                    response = prepareMessage(this.getNickname(), parts[2]);
-                                } else {
-                                    response = String.format("Пользователь с ником [ %s ] не найден.", parts[2]);
-                                }
-                                this.sendMsg(response);
+                                server.sendPrivateMessage(parts[1], parts[2], this);
                             }
                         } else {
                             server.broadcastMsg(this, str);
@@ -106,7 +107,7 @@ public class ClientHandler {
                     e.printStackTrace();
                 } finally {
                     server.unsubscribe(this);
-                    System.out.println("Client disconnected: " + nickname);
+                    System.out.println("Client disconnected: " + user.getNick());
                     try {
                         socket.close();
                     } catch (IOException e) {
@@ -127,15 +128,8 @@ public class ClientHandler {
         }
     }
 
-    public String getNickname() {
-        return nickname;
+    public User getUser() {
+        return user;
     }
 
-    public String getLogin() {
-        return login;
-    }
-
-    public static String prepareMessage(String nickname, String message) {
-        return String.format("[ %s ]: %s", nickname, message);
-    }
 }

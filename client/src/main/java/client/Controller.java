@@ -18,11 +18,14 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -115,6 +118,17 @@ public class Controller implements Initializable {
                         }
                     }
                     //цикл работы
+                    String fileName = String.format("history_%s.txt", nickname);
+                    try {
+                        List<String> history = Files.readAllLines(Paths.get(fileName), Charset.forName("UTF-8"));
+                        int start = history.size() > 100 ? history.size() - 100 : 0;
+                        for (int i = start; i < history.size(); i++) {
+                            textArea.appendText(history.get(i) + "\n");
+                        }
+                    } catch (NoSuchFileException e) {
+
+                    }
+                    OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(fileName, true), Charset.forName("UTF-8").newEncoder());
                     while (true) {
                         String str = in.readUTF();
                         if (str.startsWith("/")) {
@@ -135,9 +149,11 @@ public class Controller implements Initializable {
                                 textArea.appendText("Ник успешно сменен.\n");
                             }
                         } else {
+                            writer.write(str + "\n");
                             textArea.appendText(str + "\n");
                         }
                     }
+                    writer.close();
                 } catch (RuntimeException e) {
                     System.out.println(e.getMessage());
                 } catch (IOException e) {

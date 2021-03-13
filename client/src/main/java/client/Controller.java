@@ -88,6 +88,18 @@ public class Controller implements Initializable {
         setAuthenticated(false);
     }
 
+    private void loadHistory(String logFileName) throws IOException {
+        try {
+            List<String> history = Files.readAllLines(Paths.get(logFileName), Charset.forName("UTF-8"));
+            int start = history.size() > 100 ? history.size() - 100 : 0;
+            for (int i = start; i < history.size(); i++) {
+                textArea.appendText(history.get(i) + "\n");
+            }
+        } catch (NoSuchFileException e) {
+
+        }
+    }
+
     private void connect() {
         try {
             socket = new Socket(IP_ADDRESS, PORT);
@@ -119,15 +131,7 @@ public class Controller implements Initializable {
                     }
                     //цикл работы
                     String fileName = String.format("history_%s.txt", nickname);
-                    try {
-                        List<String> history = Files.readAllLines(Paths.get(fileName), Charset.forName("UTF-8"));
-                        int start = history.size() > 100 ? history.size() - 100 : 0;
-                        for (int i = start; i < history.size(); i++) {
-                            textArea.appendText(history.get(i) + "\n");
-                        }
-                    } catch (NoSuchFileException e) {
-
-                    }
+                    loadHistory(fileName);
                     OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(fileName, true), Charset.forName("UTF-8").newEncoder());
                     while (true) {
                         String str = in.readUTF();

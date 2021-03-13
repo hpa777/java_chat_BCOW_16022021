@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private final int PORT = 8189;
@@ -43,6 +45,8 @@ public class Server {
 
         clients = new CopyOnWriteArrayList<>();
 
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+
         try {
             server = new ServerSocket(PORT);
             System.out.println("Server started");
@@ -51,7 +55,7 @@ public class Server {
                 socket = server.accept();
                 System.out.println("Client connected");
                 System.out.println("client: " + socket.getRemoteSocketAddress());
-                new ClientHandler(this, socket);
+                executorService.execute(new ClientHandler(this, socket));
             }
 
         } catch (IOException e) {

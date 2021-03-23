@@ -8,6 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable {
     private Server server;
@@ -18,6 +19,8 @@ public class ClientHandler implements Runnable {
 
     private final static int SOCKET_TIMEOUT = 120000;
 
+    private final static Logger logger = Logger.getLogger(ClientHandler.class.getName());
+
     public ClientHandler(Server server, Socket socket) {
         try {
             this.server = server;
@@ -25,7 +28,7 @@ public class ClientHandler implements Runnable {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.severe(e.getMessage());
         }
     }
 
@@ -49,12 +52,12 @@ public class ClientHandler implements Runnable {
                     String newNick = server.getAuthService()
                             .getNicknameByLoginAndPassword(token[1], token[2]);
 
-                    user = ((DbAuthService)server.getAuthService()).getUserByLoginAndPassword(token[1], token[2]);
+                    user = ((DbAuthService) server.getAuthService()).getUserByLoginAndPassword(token[1], token[2]);
                     if (user != null) {
                         if (!server.isLoginAuthenticated(user.getLogin())) {
                             sendMsg(Command.AUTH_OK + " " + user.getNick());
                             server.subscribe(this);
-                            System.out.println("client: " + socket.getRemoteSocketAddress() +
+                            logger.info("client: " + socket.getRemoteSocketAddress() +
                                     " connected with nick: " + user.getNick());
                             break;
                         } else {
@@ -80,43 +83,48 @@ public class ClientHandler implements Runnable {
                 str = str.trim();
                 if (str.isEmpty()) {
                     continue;
-                } else if (str.equals(Command.END)) {
-                    out.writeUTF(Command.END);
-                    break;
-                } else if (str.startsWith(Command.CHANGE_NICK)) {
-                    String[] parts = str.split("\\s");
-                    if (parts.length == 2 && this.user.changeNickName(parts[1])) {
-                        this.sendMsg(String.format("%s %s", Command.CHANGE_NICK_ACCEPT, parts[1]));
-                        server.broadcastClientList();
-                    } else {
-                        this.sendMsg("Такой ник уже используется");
-                    }
-                } else if (str.startsWith(Command.PRIVATE_MESSAGE_HEAD)) {
-                    String[] parts = str.split("\\s", 3);
-                    if (parts.length == 3) {
-                        server.sendPrivateMessage(parts[1], parts[2], this);
+                } else if (str.startsWith("/")) {
+                    logger.info(String.format("User: %s send command: %s", this.user.getNick(), str));
+                    if (str.equals(Command.END)) {
+                        out.writeUTF(Command.END);
+                        break;
+                    } else if (str.startsWith(Command.CHANGE_NICK)) {
+                        String[] parts = str.split("\\s");
+                        if (parts.length == 2 && this.user.changeNickName(parts[1])) {
+                            this.sendMsg(String.format("%s %s", Command.CHANGE_NICK_ACCEPT, parts[1]));
+                            server.broadcastClientList();
+                        } else {
+                            this.sendMsg("Такой ник уже используется");
+                        }
+                    } else if (str.startsWith(Command.PRIVATE_MESSAGE_HEAD)) {
+                        String[] parts = str.split("\\s", 3);
+                        if (parts.length == 3) {
+                            server.sendPrivateMessage(parts[1], parts[2], this);
+                        }
                     }
                 } else {
+                    logger.info(String.format("User: %s send message: %s", this.user.getNick(), str));
                     server.broadcastMsg(this, str);
                 }
             }
         } catch (SocketTimeoutException e) {
+            logger.warning(e.getMessage());
             try {
                 out.writeUTF(Command.END);
             } catch (IOException ioException) {
-                ioException.printStackTrace();
+                logger.severe(ioException.getMessage());
             }
         } catch (RuntimeException e) {
-            System.out.println(e.getMessage());
+            logger.severe(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.severe(e.getMessage());
         } finally {
             server.unsubscribe(this);
-            System.out.println("Client disconnected: " + user.getNick());
+            logger.info("Client disconnected: " + user.getNick());
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.getMessage());
             }
         }
     }

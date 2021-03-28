@@ -1,11 +1,9 @@
 package server;
 
 import commands.Command;
+import jdk.internal.org.objectweb.asm.Handle;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.*;
@@ -15,12 +13,15 @@ import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.*;
 
 public class Server {
     private final int PORT = 8189;
     private final static String CONNECTION_STRING = "jdbc:mysql://localhost:3306/chat_db?autoReconnect=true";
     private final static String DB_USER = "root";
     private final static String DB_PASS = "root";
+
+    private final static Logger logger = Logger.getLogger(Server.class.getName());
 
     private ServerSocket server;
     private Socket socket;
@@ -38,8 +39,8 @@ public class Server {
             connection = DriverManager.getConnection(CONNECTION_STRING, DB_USER, DB_PASS);
             authService = new DbAuthService(connection);
             saveMessageQuery = connection.prepareStatement("INSERT INTO `messages` (`sender_id`, `recipient_id`, `message`) VALUES (?, ?, ?)");
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            logger.severe(e.getMessage());
             return;
         }
 
@@ -49,34 +50,32 @@ public class Server {
 
         try {
             server = new ServerSocket(PORT);
-            System.out.println("Server started");
+            logger.info("Server started");
 
             while (true) {
                 socket = server.accept();
-                System.out.println("Client connected");
-                System.out.println("client: " + socket.getRemoteSocketAddress());
+                logger.info("Client connected. IP: " + socket.getRemoteSocketAddress());
                 executorService.execute(new ClientHandler(this, socket));
             }
-
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.severe(e.getMessage());
         } finally {
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.getMessage());
             }
             try {
                 server.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.getMessage());
             }
             try {
                 ((DbAuthService) authService).CloseStatement();
                 saveMessageQuery.close();
                 connection.close();
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
+            } catch (SQLException e) {
+                logger.severe(e.getMessage());
             }
         }
     }
@@ -105,8 +104,8 @@ public class Server {
             saveMessageQuery.setString(3, response);
             saveMessageQuery.addBatch();
             saveMessageQuery.executeBatch();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            logger.severe(e.getMessage());
         }
     }
 
@@ -121,8 +120,8 @@ public class Server {
                 saveMessageQuery.addBatch();
             }
             saveMessageQuery.executeBatch();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            logger.severe(e.getMessage());
         }
     }
 

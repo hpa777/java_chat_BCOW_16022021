@@ -1,8 +1,11 @@
 package server;
 
 import java.sql.*;
+import java.util.logging.Logger;
 
 public class DbAuthService implements AuthService{
+
+    private final static Logger logger = Logger.getLogger(DbAuthService.class.getName());
 
     private PreparedStatement addUserQuery;
 
@@ -28,7 +31,7 @@ public class DbAuthService implements AuthService{
             }
             resultSet.close();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            logger.severe(throwables.getMessage());
         }
         return nick;
     }
@@ -46,7 +49,7 @@ public class DbAuthService implements AuthService{
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            logger.severe(throwables.getMessage());
         }
         return null;
     }
@@ -59,7 +62,7 @@ public class DbAuthService implements AuthService{
             addUserQuery.setString(3, nickname);
             addUserQuery.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            logger.severe(throwables.getMessage());
             return false;
         }
         return true;

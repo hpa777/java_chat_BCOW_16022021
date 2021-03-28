@@ -3,8 +3,11 @@ package server;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.logging.Logger;
 
 public class User {
+
+    private final static Logger logger = Logger.getLogger(User.class.getName());
 
     private long id;
 
@@ -41,7 +44,7 @@ public class User {
             preparedStatement.executeUpdate();
             preparedStatement.close();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            logger.severe(throwables.getMessage());
             return false;
         }
         this.nick = nick;
